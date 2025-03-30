@@ -1,0 +1,204 @@
+create Table customer data
+
+-- Create the CustomerData table
+CREATE TABLE CustomerData (
+    CustomerID INT IDENTITY(1,1) PRIMARY KEY, -- Unique identifier for each customer
+    CustomerType NVARCHAR(50) NOT NULL CHECK (CustomerType IN ('Individual', 'Company')), -- Enforce selective type
+    CompanyName NVARCHAR(255) NULL, -- Nullable for 'Individual' type
+    CompanyGSTNumber NVARCHAR(50) NULL, -- Nullable for 'Individual' type
+    ContactPersonName NVARCHAR(255) NOT NULL, -- Mandatory field
+    ContactNumber NVARCHAR(15) NOT NULL, -- Mandatory field
+    Address NVARCHAR(MAX) NOT NULL, -- Mandatory field
+    CONSTRAINT CK_CompanyFields CHECK (
+        (CustomerType = 'Company' AND CompanyName IS NOT NULL AND CompanyGSTNumber IS NOT NULL)
+        OR (CustomerType = 'Individual' AND CompanyName IS NULL AND CompanyGSTNumber IS NULL)
+    ) -- Ensure correct values based on CustomerType
+);
+GO
+_____________________________________________________
+Inssert data
+
+-- Insert an Individual customer
+INSERT INTO CustomerData (CustomerType, ContactPersonName, ContactNumber, Address)
+VALUES ('Individual', 'John Doe', '1234567890', '123 Main Street');
+
+-- Insert a Company customer
+INSERT INTO CustomerData (CustomerType, CompanyName, CompanyGSTNumber, ContactPersonName, ContactNumber, Address)
+VALUES ('Company', 'Tech Solutions', 'GST12345XYZ', 'Jane Smith', '9876543210', '456 Corporate Blvd');
+
+-- This will fail because a Company must have CompanyName and CompanyGSTNumber
+-- INSERT INTO CustomerData (CustomerType, ContactPersonName, ContactNumber, Address)
+-- VALUES ('Company', 'Missing Fields', '0000000000', '789 Unknown St');
+
+______________________________________________________________________________________________________________________________________________________________________
+
+create table calldetails
+
+
+CREATE TABLE CallDetails (
+    CallNo NVARCHAR(50) NOT NULL PRIMARY KEY, -- Primary Key with custom format
+    CustomerType NVARCHAR(50) NOT NULL CHECK (CustomerType IN ('Individual', 'Company')), -- Restricts to 'Individual' or 'Company'
+    LogDate DATETIME NOT NULL DEFAULT GETDATE(), -- Defaults to current date and time
+    CallType NVARCHAR(50) NOT NULL DEFAULT 'PerCall' CHECK (CallType IN ('AMC', 'PerCall')), -- Restricts to 'AMC' or 'PerCall' with default 'PerCall'
+    
+    Address NVARCHAR(255), -- Address of the customer
+    CompanyName NVARCHAR(255), -- Name of the company
+    CompanyGSTNumber NVARCHAR(50), -- GST number of the company
+    ContactNumber NVARCHAR(15), -- Contact number of the company
+    ProductName NVARCHAR(255), -- Name of the product
+    ProductModel NVARCHAR(255), -- Model of the product
+    ProductSerialNumber NVARCHAR(255), -- Serial number of the product
+    IssueDescription NVARCHAR(MAX), -- Description of the issue
+    CustomerComments NVARCHAR(MAX), -- Additional comments by the customer
+    CONSTRAINT DF_CallType_Individual CHECK 
+        ((CustomerType = 'Individual' AND CallType = 'PerCall') OR 
+         (CustomerType = 'Company' AND CallType IN ('AMC', 'PerCall'))) -- Custom constraint for call type logic
+);
+
+____________________________________________________________
+
+CREATE TRIGGER trg_AutoGenerateCallNo
+ON CallDetails
+INSTEAD OF INSERT
+AS
+BEGIN
+    DECLARE @NewCallNo NVARCHAR(50);
+    DECLARE @LastCallNo NVARCHAR(50);
+    DECLARE @LastNum INT;
+
+    -- Use a transaction to handle concurrency issues
+    BEGIN TRANSACTION;
+
+    -- Get the last CallNo in the table
+    SELECT TOP 1 @LastCallNo = CallNo
+    FROM CallDetails
+    WHERE CallNo LIKE 'CST/25-26/%'
+    ORDER BY CAST(SUBSTRING(CallNo, LEN('CST/25-26/') + 1, LEN(CallNo)) AS INT) DESC;
+
+    -- Extract the numeric part and increment
+    IF @LastCallNo IS NOT NULL
+    BEGIN
+        SET @LastNum = CAST(SUBSTRING(@LastCallNo, LEN('CST/25-26/') + 1, LEN(@LastCallNo)) AS INT) + 1;
+    END
+    ELSE
+    BEGIN
+        SET @LastNum = 1; -- Start at 1 if no previous CallNo exists
+    END
+
+    -- Create new CallNo
+    SET @NewCallNo = 'CST/25-26/' + CAST(@LastNum AS NVARCHAR(10));
+
+    -- Insert the new record with the generated CallNo
+    INSERT INTO CallDetails (CallNo, CustomerType, LogDate, CallType, CustomerMobileNumber, Address, CompanyName, 
+                             CompanyGSTNumber, ContactNumber, ProductName, ProductModel, ProductSerialNumber, 
+                             IssueDescription, CustomerComments)
+    SELECT @NewCallNo, CustomerType, LogDate, CallType, CustomerMobileNumber, Address, CompanyName, 
+           CompanyGSTNumber, ContactNumber, ProductName, ProductModel, ProductSerialNumber, 
+           IssueDescription, CustomerComments
+    FROM inserted;
+
+    -- Commit the transaction
+    COMMIT TRANSACTION;
+END;
+GO
+________________________________________________
+insert data call details
+
+INSERT INTO CallDetails (CustomerType,  Address, CompanyName, CompanyGSTNumber, 
+                         ContactNumber, ProductName, ProductModel, ProductSerialNumber, 
+                         IssueDescription, CustomerComments)
+VALUES ('Individual', '123 Main St', NULL, NULL, NULL, 'Product A', 'Model X', 'SN12345', 
+        'Issue description here', 'Customer comments here');
+
+____________________________________________________________________________________________________________________
+
+
+CREATE TABLE Engineer (
+    EngineerID INT IDENTITY(1,1) PRIMARY KEY,
+    FirstName NVARCHAR(50) NOT NULL,
+    LastName NVARCHAR(50) NOT NULL,
+    Email NVARCHAR(100) UNIQUE NOT NULL,
+    PhoneNumber NVARCHAR(15) NULL,
+    Specialization NVARCHAR(100) NULL,
+    ExperienceYears INT CHECK (ExperienceYears >= 0),
+    HireDate DATE NOT NULL,
+    IsActive BIT DEFAULT 1
+);
+
+__________________________________________________________________________________________	
+
+INSERT INTO Engineer (FirstName, LastName, Email, PhoneNumber, Specialization, ExperienceYears, JoiningDate, IsActive)
+VALUES 
+    ('Dina', 'S', 'dina@example.com', '1234567890', 'Software Engineer', 2, '2020-06-15', 1),
+    ('Elavarasan', 'K', 'ela@example.com', '9876543210', 'Civil Engineer', 1.5, '2018-03-22', 1),
+    ('Ajith', 'Kumar', 'ajith@example.com', NULL, 'Electrical Engineer', 3, '2021-08-10', 1),
+    ('Raja', 'Arunachalam', 'raja@example.com', '7894561230', 'Mechanical Engineer', 10, '2015-07-01', 1),
+    ('Praveen', 'Kumar', 'praeen@example.com', '6547893210', 'Network Engineer', 10, '2017-09-18', );
+    ('Vijay', 'Kumar', 'vijay@example.com', '6547893210', 'Network Engineer',2, '2017-09-18', 0);
+
+____________________________________________________________________________________________________________________________
+
+	CREATE TABLE Ticket(  
+      
+    CallNo NVARCHAR(50) NOT NULL PRIMARY KEY, 
+    LogDate DATETIME DEFAULT GETDATE(),  
+    CustomerType VARCHAR(50) NOT NULL,  
+    CallType VARCHAR(50) NOT NULL,  
+    CustomerName VARCHAR (100) NOT NULL,  
+    CustomerMobileNumber VARCHAR(20),  
+    Address VARCHAR(255),  
+    CompanyName VARCHAR(100) NULL,  
+    CompanyGSTNumber VARCHAR(50) NULL,  
+    ProductName VARCHAR(100),  
+    ProductModel VARCHAR(100),  
+    ProductSerialNumber VARCHAR(100),  
+    IssueDescription TEXT,  
+    CustomerComments TEXT,  
+    Status VARCHAR(50) DEFAULT 'Pending',  
+    Engineer VARCHAR(100) NULL  
+);
+
+CREATE TRIGGER trg_AutoGenerateCallNo
+ON Ticket
+INSTEAD OF INSERT
+AS
+BEGIN
+    DECLARE @NewCallNo NVARCHAR(50);
+    DECLARE @LastCallNo NVARCHAR(50);
+    DECLARE @LastNum INT;
+
+    -- Use a transaction to handle concurrency issues
+    BEGIN TRANSACTION;
+
+    -- Get the last CallNo in the table
+    SELECT TOP 1 @LastCallNo = CallNo
+    FROM Ticket
+    WHERE CallNo LIKE 'CST/25-26/%'
+    ORDER BY CAST(SUBSTRING(CallNo, LEN('CST/25-26/') + 1, LEN(CallNo)) AS INT) DESC;
+
+    -- Extract the numeric part and increment
+    IF @LastCallNo IS NOT NULL
+    BEGIN
+        SET @LastNum = CAST(SUBSTRING(@LastCallNo, LEN('CST/25-26/') + 1, LEN(@LastCallNo)) AS INT) + 1;
+    END
+    ELSE
+    BEGIN
+        SET @LastNum = 1; -- Start at 1 if no previous CallNo exists
+    END
+
+    -- Create new CallNo
+    SET @NewCallNo = 'CST/25-26/' + CAST(@LastNum AS NVARCHAR(10));
+
+    -- Insert the new record with the generated CallNo
+    INSERT INTO Ticket (CallNo, CustomerType, LogDate, CallType, CustomerName, CustomerMobileNumber, Address, CompanyName, 
+                             CompanyGSTNumber, ProductName, ProductModel, ProductSerialNumber, 
+                             IssueDescription, CustomerComments, Status, Engineer)
+    SELECT @NewCallNo, CustomerType, LogDate, CallType, CustomerName, CustomerMobileNumber, Address, CompanyName, 
+           CompanyGSTNumber,  ProductName, ProductModel, ProductSerialNumber, 
+           IssueDescription, CustomerComments, Status, Engineer
+    FROM inserted;
+
+    -- Commit the transaction
+    COMMIT TRANSACTION;
+END;
+GO

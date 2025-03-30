@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customer Ticket Form</title>
+    <style>
+        .error { color: red; display: none; }
+    </style>
+</head>
+<body>
+    <h2>Customer Ticket Registration</h2>
+    <form id="ticketForm">
+        <label for="logDate">Log Date:</label>
+        <input type="date" id="logDate" name="LogDate" required><br><br>
+        
+        <label for="customerType">Customer Type:</label>
+        <select id="customerType" name="CustomerType" required>
+            <option value="Individual">Individual</option>
+            <option value="Company">Company</option>
+        </select><br><br>
+
+        <label for="customerName">Customer Name:</label>
+        <input type="text" id="customerName" name="CustomerName" required><br><br>
+
+        <label for="customerMobileNumber">Customer Mobile Number:</label>
+        <input type="text" id="customerMobileNumber" name="CustomerMobileNumber" required><br><br>
+
+        <label for="address">Address:</label>
+        <input type="text" id="address" name="Address" required><br><br>
+
+        <div id="companyFields" style="display: none;">
+            <label for="companyName">Company Name:</label>
+            <input type="text" id="companyName" name="CompanyName"><br><br>
+
+            <label for="companyGSTNumber">Company GST Number:</label>
+            <input type="text" id="companyGSTNumber" name="CompanyGSTNumber"><br><br>
+        </div>
+
+        <label for="callType">Call Type:</label>
+        <select id="callType" name="CallType" required>
+            <option value="AMC">AMC</option>
+            <option value="PERCALL">PERCALL</option>
+            <option value="Others">Others</option>
+        </select><br><br>
+
+        <div id="otherCallTypeField" style="display: none;">
+            <label for="otherCallType">Specify Other Call Type:</label>
+            <input type="text" id="otherCallType" name="OtherCallType"><br><br>
+        </div>
+
+        <label for="productName">Product Name:</label>
+        <input type="text" id="productName" name="ProductName" required><br><br>
+
+        <label for="productModel">Product Model:</label>
+        <input type="text" id="productModel" name="ProductModel" required><br><br>
+
+        <label for="productSerialNumber">Product Serial Number:</label>
+        <input type="text" id="productSerialNumber" name="ProductSerialNumber" required><br><br>
+
+        <label for="issueDescription">Issue Description:</label>
+        <textarea id="issueDescription" name="IssueDescription" required></textarea><br><br>
+
+        <label for="customerComments">Customer Comments:</label>
+        <textarea id="customerComments" name="CustomerComments"></textarea><br><br>
+
+        <button type="button" onclick="submitForm()">Submit</button>
+    </form>
+
+    <script>
+        document.getElementById('customerType').addEventListener('change', function() {
+            document.getElementById('companyFields').style.display = this.value === 'Company' ? 'block' : 'none';
+        });
+
+        document.getElementById('callType').addEventListener('change', function() {
+            document.getElementById('otherCallTypeField').style.display = this.value === 'Others' ? 'block' : 'none';
+        });
+
+        document.getElementById('customerType').addEventListener('change', function() {
+    // Hide or show company fields based on selection
+    const companyFields = document.getElementById('companyFields');
+    companyFields.style.display = this.value === 'Company' ? 'block' : 'none';
+
+    // Clear relevant text fields when customer type changes
+    document.getElementById('customerName').value = '';
+    document.getElementById('customerMobileNumber').value = '';
+    document.getElementById('address').value = '';
+    document.getElementById('companyName').value = '';
+    document.getElementById('companyGSTNumber').value = '';
+    document.getElementById('productName').value = '';
+    document.getElementById('productModel').value = '';
+    document.getElementById('productSerialNumber').value = '';
+    document.getElementById('issueDescription').value = '';
+    document.getElementById('customerComments').value = '';
+    document.getElementById('otherCallType').value = '';
+    document.getElementById('logDate').value = '';
+});
+
+
+        async function submitForm() {
+            if (!validateForm()) {
+                return;
+            }
+            const formData = new FormData(document.getElementById('ticketForm'));
+            const data = Object.fromEntries(formData);
+            if (data.CallType !== 'Others') delete data.OtherCallType;
+
+            const response = await fetch('http://localhost:3000/ticket', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            const result = await response.json();
+            alert(result.message);
+            // Clear form fields after successful submission
+        document.getElementById('ticketForm').reset();
+
+// Hide company fields and other call type field after reset
+document.getElementById('companyFields').style.display = 'none';
+document.getElementById('otherCallTypeField').style.display = 'none';
+        }
+      
+
+        function validateForm() {
+    let isValid = true;
+    let errorMessage = '';
+
+    const logDate = document.getElementById('logDate').value.trim();
+    const customerName = document.getElementById('customerName').value.trim();
+    const customerMobileNumber = document.getElementById('customerMobileNumber').value.trim();
+    const address = document.getElementById('address').value.trim();
+    const callType = document.getElementById('callType').value;
+    const otherCallType = document.getElementById('otherCallType').value.trim();
+    const productName = document.getElementById('productName').value.trim();
+    const productModel = document.getElementById('productModel').value.trim();
+    const productSerialNumber = document.getElementById('productSerialNumber').value.trim();
+    const issueDescription = document.getElementById('issueDescription').value.trim();
+
+    if (!logDate) {
+        errorMessage += "Log Date is required.\n";
+        isValid = false;
+    }
+    if (!customerName) {
+        errorMessage += "Customer Name is required.\n";
+        isValid = false;
+    }
+    if (!customerMobileNumber || !/^\d{10}$/.test(customerMobileNumber)) {
+        errorMessage += "Valid Customer Mobile Number (10 digits) is required.\n";
+        isValid = false;
+    }
+    if (!address) {
+        errorMessage += "Address is required.\n";
+        isValid = false;
+    }
+    if (callType === "Others" && !otherCallType) {
+        errorMessage += "Please specify the 'Other Call Type'.\n";
+        isValid = false;
+    }
+    if (!productName) {
+        errorMessage += "Product Name is required.\n";
+        isValid = false;
+    }
+    if (!productModel) {
+        errorMessage += "Product Model is required.\n";
+        isValid = false;
+    }
+    if (!productSerialNumber) {
+        errorMessage += "Product Serial Number is required.\n";
+        isValid = false;
+    }
+    if (!issueDescription) {
+        errorMessage += "Issue Description is required.\n";
+        isValid = false;
+    }
+
+    if (!isValid) {
+        alert(errorMessage);
+    }
+
+    return isValid;
+}
+
+
+    </script>
+</body>
+</html>

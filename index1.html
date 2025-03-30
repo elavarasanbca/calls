@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clear Text Fields</title>
+</head>
+<body>
+
+    <select id="mySelect" onchange="clearTextFields()">
+        <option value="">Select an option</option>
+        <option value="1">Option 1</option>
+        <option value="2">Option 2</option>
+    </select>
+
+    <input type="text" class="text-field" placeholder="Text field 1">
+    <input type="text" class="text-field" placeholder="Text field 2">
+    <input type="text" class="text-field" placeholder="Text field 3">
+
+    <script>
+        function clearTextFields() {
+            let textFields = document.querySelectorAll(".text-field");
+            textFields.forEach(field => field.value = "");
+        }
+    </script>
+
+</body>
+</html>
